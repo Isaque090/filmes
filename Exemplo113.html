@@ -319,7 +319,7 @@
                 mega: `https://megaembed.com/embed/${imdbId}`,
                 ultra: `https://ultraembed.fun/filme/${imdbId}`,
                 // CORREÇÃO: Usa o ID do TMDb para o player 'vicio'https://primevicio.netlify.app/embed/movie/260514
-                vicio: `https://primevicio.netlify.app/embed/movie/${idParaVicio}`,
+                vicio: `https://filmesss.netlify.app/embed/movie/${idParaVicio}`,
                 super: `https://superflixapi.asia/filme/${imdbId}`
             };
         }
@@ -343,7 +343,7 @@
         // Função para verificar se a URL é segura
         function isSafeUrl(url) {
             // CORREÇÃO: Adicionado 'primevicio.lat' à lista de domínios seguros
-            const safeDomains = ['playerflixapi.com', 'megaembed.com', 'ultraembed.fun', 'superflixapi.asia', 'primevicio.netlify.app'];
+            const safeDomains = ['playerflixapi.com', 'megaembed.com', 'ultraembed.fun', 'superflixapi.asia', 'filmesss.netlify.app'];
             try {
                 const urlObj = new URL(url);
                 return safeDomains.includes(urlObj.hostname);
