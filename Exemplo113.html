@@ -9,6 +9,25 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <title>Assistir Filme</title>
     <style>
+        /* Regras de proteção do Overlay */
+        .iframe-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: auto;
+            cursor: default;
+            background: transparent;
+        }
+
+        /* Regra para esconder o overlay e permitir a interação com o player */
+        .iframe-overlay.hidden {
+            pointer-events: none;
+            cursor: auto;
+        }
+
         body {
             background-color: #000;
             display: flex;
@@ -198,6 +217,13 @@
             transform: scale(1.15);
             transition: 0.50s ease;
         }
+     .container {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .controls {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 
@@ -226,12 +252,32 @@
 
     <div class="flex-grow-1">
         <div class="container toopo">
+              <div class="controls">
+        <!-- BOTÃO FORA DO IFRAME -->
+        <button class="switch-player-btn" onclick="mudarCor(this)" id="sandbox-btn" style="background-color: #ff0;" data-cor-atual="original">
+    Recarregar Player (Sandbox)
+</button>
+
+    </div>
+    
             <div class="card mt-3 video-container">
                 <div class="card-body">
-                    <iframe id="ve-iframe" src="" frameborder="0" allowfullscreen webkitallowfullscreen
-                        mozallowfullscreen></iframe>
+                    <div id="player-overlay" class="iframe-overlay"></div>
+
+                    <iframe id="ve-iframe" src="" frameborder="0" 
+                        allowfullscreen webkitallowfullscreen mozallowfullscreen
+                        
+                        allow="fullscreen; popups 'none'; top-navigation 'none'"
+                                sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation">
+
+                    
+                    </iframe>
+
+                    
                 </div>
             </div>
+            
+
             <div class="favorite-container">
                 <span class="material-symbols-outlined favorite-icon" id="favorite-icon" onclick="toggleFavorite()"
                     aria-label="Adicionar ou remover dos favoritos">favorite</span>
@@ -281,8 +327,7 @@
             <small class="text-secondary">&copy; 2025 Todos os direitos reservados.</small>
         </div>
     </footer>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
         integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
@@ -290,12 +335,105 @@
         crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+      const original = '#ff0';
+const mudar = '#3498db';
+
+function mudarCor(botao) {
+    // Verifica o estado atual usando o atributo de dados
+    if (botao.getAttribute('data-cor-atual') === 'original') {
+        botao.style.backgroundColor = mudar;
+        botao.setAttribute('data-cor-atual', 'mudar'); // Atualiza o estado
+    } else {
+        botao.style.backgroundColor = original;
+        botao.setAttribute('data-cor-atual', 'original'); // Atualiza o estado
+    }
+}
+
+  
+// ======================================================
+// BOTÃO FORA DO IFRAME: REMOVE/RESTAURA SANDBOX + RECARREGA
+// ======================================================
+document.addEventListener("DOMContentLoaded", function () {
+    const botao = document.getElementById("sandbox-btn");
+    const iframe = document.getElementById("ve-iframe");
+
+    // Permissões originais do sandbox
+    const PERMISSOES_ORIGINAIS = "allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation";
+
+    botao.addEventListener("click", function () {
+        const urlAtual = iframe.src;
+
+        // 1. Remove o sandbox temporariamente
+        iframe.removeAttribute("sandbox");
+        console.log("Sandbox removido temporariamente");
+
+        // 2. Força o recarregamento
+        iframe.contentWindow.location.href = urlAtual;
+
+        // 3. Restaura o sandbox após um pequeno delay (necessário)
+        setTimeout(() => {
+            iframe.setAttribute("sandbox", PERMISSOES_ORIGINAIS);
+            console.log("Sandbox restaurado com segurança");
+        }, 100);
+    });
+});
+</script>
+    <script>
+        const playerOverlay = document.getElementById('player-overlay');
+        const iframe = document.getElementById('ve-iframe');
+        
+        // Variável para gerenciar o timeout de reativação do overlay
+        let overlayTimeoutId = null; 
+
+        // =========================================================
+        // === 🚨 DETECÇÃO DE PERDA DE FOCO (OTIMIZADA) ===
+        // Reativa a proteção silenciosamente, sem modal, após um clique no iframe
+        // =========================================================
+        window.addEventListener('blur', function() {
+            // Se o overlay ESTIVER oculto, significa que o clique foi direto no player/anúncio.
+            if (playerOverlay && playerOverlay.classList.contains('hidden')) {
+                
+                console.warn("Foco perdido detectado! Forçando reativação imediata da proteção.");
+                
+                // Reativa o overlay Imediatamente, forçando o próximo clique a ser interceptado.
+                clearTimeout(overlayTimeoutId);
+                playerOverlay.classList.remove('hidden');
+                iframe.style.cursor = 'default';
+            }
+        });
+        
+        // =========================================================
+        // === FUNÇÃO DE CLIQUE NO OVERLAY (5 SEGUNDOS) ===
+        // A proteção JS que intercepta o primeiro clique
+        // =========================================================
+        if (playerOverlay) {
+            playerOverlay.addEventListener('click', function() {
+                // 1. Limpa qualquer timeout anterior 
+                clearTimeout(overlayTimeoutId);
+                
+                // 2. Esconde o overlay, permitindo que o clique passe para o player
+                playerOverlay.classList.add('hidden');
+                iframe.style.cursor = 'pointer'; 
+                
+                console.log('Overlay desativado. Proteção reativará em 5 segundos.');
+
+                // 3. Define um timeout para reativar o overlay após 5 segundos
+                overlayTimeoutId = setTimeout(() => {
+                    if (playerOverlay && playerOverlay.classList.contains('hidden')) {
+                        playerOverlay.classList.remove('hidden');
+                        iframe.style.cursor = 'default';
+                        console.log('Overlay reativado após 5 segundos para nova proteção.');
+                    }
+                }, 5000); // 5000 milissegundos = 5 segundos
+            });
+        }
+
         const TMDB_API_KEY = 'e213742dac5f2f6cd11f3f89bae08c2b';
         const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
         const urlParams = new URLSearchParams(window.location.search);
         const filmeId = urlParams.get('filme'); // Este é o IMDb ID (ex: tt1234567)
         const playerType = urlParams.get('player');
-        const iframe = document.getElementById('ve-iframe');
+        
         const movieTitle = document.getElementById('movie-title');
         const movieYear = document.getElementById('movie-year');
         const movieGenres = document.getElementById('movie-genres');
@@ -306,25 +444,19 @@
         const favoriteIcon = document.getElementById('favorite-icon');
         const switchPlayerButton = document.querySelector('.switch-player-btn');
 
-        // Variável para armazenar o ID do TMDb após a conversão (usado para o player 'vicio')
         let currentTmdbId = null;
 
-        // Função para criar URLs dos players
-        // Aceita IMDb ID e TMDb ID. O player 'vicio' usa o TMDb ID.
         function createPlayerUrls(imdbId, tmdbId) {
-            // Usa tmdbId para 'vicio', senão usa o imdbId como fallback (caso a busca TMDB falhe)
             const idParaVicio = tmdbId || imdbId; 
             return {
                 playerflix: `https://playerflixapi.com/filme/${imdbId}`,
                 mega: `https://megaembed.com/embed/${imdbId}`,
                 ultra: `https://ultraembed.fun/filme/${imdbId}`,
-                // CORREÇÃO: Usa o ID do TMDb para o player 'vicio'https://primevicio.netlify.app/embed/movie/260514
                 vicio: `https://filmesss.netlify.app/embed/movie/${idParaVicio}`,
                 super: `https://superflixapi.asia/filme/${imdbId}`
             };
         }
 
-        // Função para obter TMDb ID a partir do IMDb ID
         async function getTMDbIdFromIMDb(imdbId) {
             try {
                 const response = await fetch(`${TMDB_BASE_URL}/find/${imdbId}?api_key=${TMDB_API_KEY}&language=pt-BR&external_source=imdb_id`);
@@ -340,9 +472,7 @@
             }
         }
 
-        // Função para verificar se a URL é segura
         function isSafeUrl(url) {
-            // CORREÇÃO: Adicionado 'primevicio.lat' à lista de domínios seguros
             const safeDomains = ['playerflixapi.com', 'megaembed.com', 'ultraembed.fun', 'superflixapi.asia', 'filmesss.netlify.app'];
             try {
                 const urlObj = new URL(url);
@@ -352,7 +482,6 @@
             }
         }
 
-        // Função para testar carregamento de um player
         async function testPlayerLoad(url) {
             const TEST_TIMEOUT_MS = 3000;
             try {
@@ -367,25 +496,21 @@
             }
         }
 
-        // Função para obter player do cache
         function getCachedPlayer(filmeId) {
             return localStorage.getItem(`player_${filmeId}`);
         }
 
-        // Função para salvar player no cache
         function setCachedPlayer(filmeId, url) {
             localStorage.setItem(`player_${filmeId}`, url);
         }
 
-        // Função para selecionar o melhor player
-        async function selectBestPlayer(imdbId, tmdbId) { // Recebe os dois IDs
+        async function selectBestPlayer(imdbId, tmdbId) { 
             const cachedPlayer = getCachedPlayer(imdbId);
             if (cachedPlayer && isSafeUrl(cachedPlayer)) {
                 console.log('Usando player do cache:', cachedPlayer);
                 return cachedPlayer;
             }
 
-            // CORREÇÃO: Cria URLs com o ID correto para 'vicio'
             const urls = createPlayerUrls(imdbId, tmdbId);
             const userAgent = navigator.userAgent;
             const playerKeys = Object.keys(urls).filter(key => !urls[key].includes('megaembed') || !/mobile/i.test(userAgent));
@@ -413,37 +538,43 @@
             return urls.playerflix;
         }
 
-        // Função para trocar player
         function switchPlayer() {
-            // CORREÇÃO: Cria URLs com o ID correto para 'vicio'
             const urls = createPlayerUrls(filmeId, currentTmdbId); 
             const playerKeys = Object.keys(urls);
             const currentUrl = iframe.src;
             const currentIndex = playerKeys.findIndex(key => urls[key] === currentUrl);
             const nextIndex = (currentIndex + 1) % playerKeys.length;
-            const newUrl = urls[playerKeys[nextIndex]];
+            let newUrl = urls[playerKeys[nextIndex]];
+            let safetyCheckIndex = nextIndex;
+            let originalIndex = currentIndex;
+            let maxTries = playerKeys.length;
+            let tries = 0;
 
-            if (isSafeUrl(newUrl)) {
+            while (!isSafeUrl(newUrl) && tries < maxTries) {
+                safetyCheckIndex = (safetyCheckIndex + 1) % playerKeys.length;
+                newUrl = urls[playerKeys[safetyCheckIndex]];
+                tries++;
+                if (safetyCheckIndex === originalIndex) { 
+                    break;
+                }
+            }
+
+            if (isSafeUrl(newUrl) && newUrl !== currentUrl) {
                 iframe.src = newUrl;
                 setCachedPlayer(filmeId, newUrl);
-                console.log('Trocado para player:', newUrl);
+                
+                // AÇÃO DE PROTEÇÃO: Limpa o timeout e reativa o overlay para proteger o novo player
+                clearTimeout(overlayTimeoutId);
+                playerOverlay.classList.remove('hidden');
+                iframe.style.cursor = 'default';
+                
+                console.log('Trocado para player. Overlay reativado.');
             } else {
-                console.error('URL do player não é segura:', newUrl);
-                // Opcional: Tenta trocar para o próximo player seguro se a URL do 'vicio' falhar (mesmo após correção)
-                const nextKeyIndex = (nextIndex + 1) % playerKeys.length;
-                const nextKey = playerKeys[nextKeyIndex];
-                const nextUrl = urls[nextKey];
-                if (isSafeUrl(nextUrl) && nextKeyIndex !== currentIndex) {
-                    iframe.src = nextUrl;
-                    setCachedPlayer(filmeId, nextUrl);
-                    console.log('Troca falhou na segurança, usando o próximo:', nextUrl);
-                } else {
-                    alert('Não foi possível trocar o player para uma URL segura.');
-                }
+                alert('Não foi possível trocar o player para uma URL segura ou apenas um player seguro disponível.');
+                console.error('URL do player não é segura ou sem alternativas seguras:', newUrl);
             }
         }
 
-        // Função para favoritar/desfavoritar
         function toggleFavorite() {
             if (!filmeId) {
                 console.warn('Nenhum filmeId fornecido para favoritar.');
@@ -460,7 +591,6 @@
             localStorage.setItem('favorites', JSON.stringify(favorites));
         }
 
-        // Função para verificar status de favorito
         function checkFavoriteStatus() {
             let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
             if (favorites.includes(filmeId)) {
@@ -470,7 +600,6 @@
             }
         }
 
-        // Função principal para carregar filme e player
         async function loadMovieAndPlayer() {
             if (!filmeId) {
                 movieTitle.textContent = 'Erro';
@@ -484,15 +613,12 @@
                 return;
             }
 
-            // Carregar detalhes do filme e CONVERTER ID
             if (filmeId.startsWith('tt')) {
-                // CORREÇÃO: Armazena o TMDb ID na variável global currentTmdbId
                 currentTmdbId = await getTMDbIdFromIMDb(filmeId);
             }
 
             if (currentTmdbId) {
                 try {
-                    // Usa currentTmdbId para buscar os detalhes
                     const response = await fetch(`${TMDB_BASE_URL}/movie/${currentTmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`);
                     if (response.ok) {
                         const movieDetails = await response.json();
@@ -521,11 +647,10 @@
                             moviePoster.style.display = 'none';
                         }
                     } else {
-                        // ... (Mensagens de erro)
+                        console.error('Erro ao buscar detalhes do filme (status):', response.status);
                     }
                 } catch (error) {
                     console.error('Erro ao buscar detalhes do filme:', error);
-                    // ... (Mensagens de erro)
                 }
             } else {
                 movieTitle.textContent = 'Detalhes Não Encontrados';
@@ -537,8 +662,6 @@
                 moviePoster.style.display = 'none';
             }
 
-            // Selecionar player
-            // CORREÇÃO: Cria URLs iniciais com os IDs corretos
             const urls = createPlayerUrls(filmeId, currentTmdbId);
             let playerUrl = '';
             
@@ -547,31 +670,16 @@
                 console.log(`Usando player predefinido: ${playerType}`);
                 setCachedPlayer(filmeId, playerUrl);
             } else {
-                // CORREÇÃO: Passa os IDs para a seleção do melhor player
                 playerUrl = await selectBestPlayer(filmeId, currentTmdbId);
             }
 
             iframe.src = playerUrl;
-
-            // Monitorar erros no iframe
-            iframe.onerror = () => {
-                console.error('Erro no player:', playerUrl);
-                switchPlayer();
-            };
-
-            // Monitorar carregamento
-            setTimeout(() => {
-                if (iframe.src && !switchPlayerButton.style.display) {
-                    console.warn('Timeout de carregamento do player. Usando fallback.');
-                    switchPlayer();
-                }
-            }, 10000);
-
             checkFavoriteStatus();
         }
 
         document.addEventListener('DOMContentLoaded', loadMovieAndPlayer);
     </script>
+
 </body>
 
 </html>
