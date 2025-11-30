@@ -717,6 +717,7 @@ Ano: 2011">
                                     </a>
                                 </div>
                             </div>
+
                             <div class="card">
                                 <div class="card-body">
                                     <a href="Exemplo113.html?filme=tt2953050" class="text-decoration-none">
@@ -1561,53 +1562,54 @@ Ano: 2011">
             search();
         }
 
-        function populateCarousel() {
-            const cards = document.querySelectorAll('.movie-grid .card');
-            const carouselInner = document.querySelector('.carousel-inner');
-            const carouselIndicators = document.querySelector('.carousel-indicators');
+       function populateCarousel() {
+    const cards = document.querySelectorAll('.movie-grid .card');
+    const carouselInner = document.querySelector('.carousel-inner');
+    const carouselIndicators = document.querySelector('.carousel-indicators');
 
-            carouselInner.innerHTML = '';
-            carouselIndicators.innerHTML = '';
+    carouselInner.innerHTML = '';
+    carouselIndicators.innerHTML = '';
 
-            const shuffledCards = Array.from(cards).sort(() => Math.random() - 0.5);
-            const selectedCards = shuffledCards.slice(0, 4);
+    // pega 5 filmes aleatórios
+    const shuffled = Array.from(cards).sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 5);
 
-            selectedCards.forEach((card, index) => {
-                const img = card.querySelector('img');
-                const alt = img.alt;
-                const link = card.querySelector('a').href; // <-- pega o link correto
-                let highResSrc = img.src;
+    selected.forEach((card, index) => {
+        const img = card.querySelector('img');
+        const oldSrc = img.src;           // ex: https://image.tmdb.org/t/p/w300/abc123.jpg
+        const link = card.querySelector('a').href;
+        const title = img.alt || 'Filme';
 
-                // melhora a qualidade da imagem do carrossel
-                if (highResSrc.includes('themoviedb.org/t/p/') || highResSrc.includes('tmdb.org/t/p/')) {
-                    highResSrc = highResSrc.replace(/\/t\/p\/w\d+(?:_and_h\d+_face)?\//, '/t/p/w1280/');
-                }
+        // ==== PEGA O CÓDIGO DA IMAGEM (ex: abc123.jpg) ====
+        const fileCode = oldSrc.match(/\/([^\/]+)$/)[1]; // pega só o final do link
 
-                // cria o item do carrossel com link clicável
-                const carouselItem = document.createElement('div');
-                carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                carouselItem.innerHTML = `
-      <a href="${link}" style="display:block; position:relative;">
-        <img src="${highResSrc}" class="d-block w-100" alt="${alt}">
-        <div class="carousel-caption">
-          <h5>${alt}</h5>
-        </div>
-      </a>
-    `;
-                carouselInner.appendChild(carouselItem);
+        // ==== MONTA IMAGEM EM ALTA QUALIDADE ====
+        const highQuality = `https://image.tmdb.org/t/p/w1280_and_h720_bestv2/${fileCode}`;
+        // ou use original (ainda melhor, mas mais pesado):
+        // const highQuality = `https://image.tmdb.org/t/p/original/${fileCode}`;
 
-                // indicador
-                const indicator = document.createElement('li');
-                indicator.setAttribute('data-target', '#movieCarousel');
-                indicator.setAttribute('data-slide-to', index);
-                if (index === 0) indicator.classList.add('active');
-                carouselIndicators.appendChild(indicator);
-            });
+        // Item do carrossel
+        const item = document.createElement('div');
+        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+        item.innerHTML = `
+            <a href="${link}">
+                <img src="${highQuality}" class="d-block  alt="${title}"
+                     style=" ">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5 class=" bg-opacity-75 px-3 py-2 rounded">${title}</h5>
+                </div>
+            </a>
+        `;
+        carouselInner.appendChild(item);
 
-            $('#movieCarousel').carousel();
-        }
-
-
+        // Indicador
+        const li = document.createElement('li');
+        li.dataset.target = '#movieCarousel';
+        li.dataset.slideTo = index;
+        if (index === 0) li.classList.add('active');
+        carouselIndicators.appendChild(li);
+    });
+}
         function search() {
             let input = document.getElementById('searchbar').value.toLowerCase();
             let cards = document.querySelectorAll('.card');
